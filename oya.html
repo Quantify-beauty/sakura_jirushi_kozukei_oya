@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+<title>🌸 印のお小遣い計算機 🌸 おや用</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{
+  --sakura:#ffd6e0;
+  --sakura-deep:#ff9bb3;
+  --sakura-dark:#d8537a;
+  --cream:#fff8f3;
+  --gold:#c9a961;
+  --ink:#3d2a35;
+  --leaf:#a8c7a3;
+  --indigo:#3a4d6b;
+  --shadow:0 4px 20px rgba(58,77,107,.12);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{font-family:"Hiragino Mincho ProN","Yu Mincho",serif;background:var(--cream);color:var(--ink);min-height:100vh;font-size:16px;-webkit-text-size-adjust:100%}
+body{
+  background:
+    radial-gradient(ellipse at top right, rgba(255,214,224,.3), transparent 50%),
+    radial-gradient(ellipse at bottom left, rgba(168,199,163,.2), transparent 50%),
+    var(--cream);
+  padding:0 0 80px;
+  touch-action:manipulation pinch-zoom;
+}
+
+header{
+  position:relative;text-align:center;padding:32px 20px 24px;
+  background:linear-gradient(180deg, rgba(255,214,224,.5), transparent);
+  border-bottom:1px solid rgba(216,83,122,.15);
+}
+header h1{
+  font-size:clamp(20px,5vw,28px);font-weight:600;letter-spacing:.05em;
+  color:var(--sakura-dark);
+}
+header .sub{margin-top:6px;font-size:13px;color:#8a6f7a;letter-spacing:.1em}
+
+main{max-width:680px;margin:0 auto;padding:20px 16px}
+
+.card{
+  background:#fff;border-radius:20px;padding:20px;margin-bottom:16px;
+  box-shadow:var(--shadow);border:1px solid rgba(216,83,122,.1);
+}
+
+.card h2{
+  font-size:15px;color:var(--sakura-dark);margin-bottom:14px;
+  padding-bottom:10px;border-bottom:1.5px dashed rgba(216,83,122,.2);
+  letter-spacing:.05em;display:flex;align-items:center;gap:8px;
+}
+
+/* 期間表示 */
+.period-card{text-align:center}
+.period-label{font-size:12px;color:#8a6f7a;letter-spacing:.2em;margin-bottom:6px}
+.period-value{font-size:18px;font-weight:600;color:var(--ink);margin-bottom:14px}
+
+/* 月合計 */
+.month-card{
+  background:linear-gradient(135deg, var(--indigo), #5a708e);
+  color:#fff;text-align:center;padding:24px 20px;
+  position:relative;overflow:hidden;
+}
+.month-card::before{
+  content:"💰";position:absolute;top:-10px;right:-5px;font-size:70px;opacity:.12;transform:rotate(15deg);
+}
+.month-label{font-size:12px;letter-spacing:.2em;opacity:.9;margin-bottom:8px}
+.month-points{font-size:42px;font-weight:600;line-height:1}
+.month-points small{font-size:18px;font-weight:400;margin-left:4px}
+.month-yen{margin-top:8px;font-size:16px;opacity:.95;letter-spacing:.1em}
+.month-breakdown{margin-top:12px;font-size:11px;opacity:.85;letter-spacing:.05em}
+
+/* 入力エリア */
+.code-input{
+  width:100%;min-height:90px;padding:12px;
+  border:2px dashed var(--sakura-deep);border-radius:12px;
+  font-family:"Courier New",monospace;font-size:11px;
+  background:#fff8fa;color:var(--ink);resize:vertical;
+}
+.code-input:focus{outline:none;border-color:var(--sakura-dark);background:#fff}
+
+.btn{
+  padding:12px 18px;border:none;border-radius:12px;cursor:pointer;
+  font-family:inherit;font-size:14px;font-weight:600;letter-spacing:.05em;
+  transition:transform .15s, box-shadow .15s;
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+}
+.btn:active{transform:scale(.97)}
+.btn-primary{
+  background:linear-gradient(135deg, var(--sakura-deep), var(--sakura-dark));
+  color:#fff;box-shadow:0 4px 14px rgba(216,83,122,.3);
+  width:100%;margin-top:10px;padding:14px;
+}
+.btn-secondary{
+  background:#fff;color:var(--sakura-dark);
+  border:2px solid var(--sakura-deep);
+}
+.btn-ghost{
+  background:rgba(255,214,224,.4);color:var(--sakura-dark);
+  border:1px dashed var(--sakura-deep);font-size:12px;padding:8px 12px;
+}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.btn-row .btn{flex:1;min-width:140px}
+
+/* 週タブ */
+.week-tabs{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-bottom:16px}
+.week-tab{
+  flex:1;min-width:90px;padding:12px 6px;border:1.5px solid var(--sakura);
+  border-radius:12px;background:#fff;cursor:pointer;font-size:13px;
+  color:var(--ink);transition:all .2s;font-family:inherit;position:relative;
+}
+.week-tab.active{background:var(--sakura-deep);color:#fff;border-color:var(--sakura-deep);font-weight:600}
+.week-tab.has-data::after{
+  content:"";position:absolute;top:6px;right:6px;
+  width:8px;height:8px;border-radius:50%;background:var(--gold);
+}
+.week-tab.active.has-data::after{background:#fff}
+.week-tab .num{display:block;font-size:16px;font-weight:600;margin-bottom:3px}
+.week-tab .pts{display:block;font-size:12px;margin-top:3px;opacity:.85;font-weight:600}
+
+/* 週カレンダー */
+.week-table{
+  width:100%;border-collapse:separate;border-spacing:0;
+  font-size:15px;background:#fff;border-radius:12px;overflow:hidden;
+  border:1px solid rgba(216,83,122,.15);
+}
+.week-table thead{background:linear-gradient(180deg, #fff8fa, #ffeef2)}
+.week-table th{
+  padding:10px 4px;font-size:13px;color:var(--sakura-dark);
+  font-weight:600;letter-spacing:.05em;border-bottom:1.5px dashed rgba(216,83,122,.25);
+  text-align:center;
+}
+.week-table th:first-child{text-align:left;padding-left:12px;font-size:14px}
+.week-table th .pts-label{font-size:11px;font-weight:400;display:block;margin-top:2px;opacity:.8}
+.week-table td{
+  padding:10px 4px;text-align:center;border-bottom:1px dotted rgba(216,83,122,.15);
+  font-size:15px;
+}
+.week-table td:first-child{text-align:left;padding-left:12px;font-weight:600;color:var(--ink);font-size:15px;white-space:nowrap}
+.week-table tr:last-child td{border-bottom:none}
+.week-table .total-col{font-weight:600;color:var(--sakura-dark);background:rgba(255,214,224,.2);font-size:16px}
+
+/* チェックボックス（大きめ） */
+.check{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:34px;height:34px;border-radius:8px;border:2px solid #ddd;
+  background:#fff;cursor:pointer;font-size:18px;font-weight:bold;
+  transition:all .15s;color:transparent;
+}
+.check.on{
+  background:linear-gradient(135deg, var(--sakura-deep), var(--sakura-dark));
+  border-color:var(--sakura-dark);color:#fff;
+}
+.check.proposed{
+  border-style:dashed;border-color:var(--gold);
+  background:#fff8e1;color:var(--gold);
+}
+.check.proposed.on{background:linear-gradient(135deg,#e8c46a,#c9a961);color:#fff;border-style:solid}
+.check:active{transform:scale(.9)}
+
+/* 週フッター */
+.week-foot{
+  margin-top:14px;padding:14px 16px;
+  background:linear-gradient(135deg, #fff8fa, #fff);
+  border-radius:12px;border:1px solid rgba(216,83,122,.15);
+  display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;
+}
+.week-foot .label{font-size:13px;color:#8a6f7a;letter-spacing:.1em;margin-bottom:4px}
+.week-foot .val{font-size:26px;font-weight:600;color:var(--sakura-dark)}
+.week-foot .yen{font-size:15px;color:var(--ink);margin-left:8px;font-weight:600}
+
+/* 提案バッジ */
+.proposal-badge{
+  display:inline-block;padding:2px 8px;border-radius:20px;
+  background:#fff8e1;color:var(--gold);font-size:10px;font-weight:600;
+  border:1px solid var(--gold);margin-left:6px;letter-spacing:.05em;
+}
+
+.toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(120%);
+  background:var(--ink);color:#fff;padding:12px 20px;border-radius:30px;
+  font-size:13px;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,.25);
+  transition:transform .3s;pointer-events:none;max-width:90vw;text-align:center;
+}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.error{background:#a83246}
+.toast.ok{background:#5a8c4d}
+
+.empty-hint{
+  text-align:center;color:#aa9da3;font-size:12px;
+  padding:30px 20px;font-style:italic;
+}
+
+.legend{
+  font-size:12px;color:#8a6f7a;margin-top:12px;text-align:center;line-height:1.7;
+}
+.legend span{display:inline-block;margin:0 6px}
+
+.footer-deco{
+  text-align:center;margin-top:30px;font-size:14px;color:var(--sakura-deep);
+  letter-spacing:1em;opacity:.6;
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>🌸 印のお小遣い計算機 🌸</h1>
+  <div class="sub">おや 用 ・ 管理画面</div>
+</header>
+
+<main>
+  <!-- 期間 -->
+  <div class="card period-card">
+    <div class="period-label">— お小遣い期間（25日締め）—</div>
+    <div class="period-value" id="periodValue"></div>
+  </div>
+
+  <!-- 月合計 -->
+  <div class="card month-card">
+    <div class="month-label">— 今月のお小遣い見込み —</div>
+    <div class="month-points"><span id="monthPts">2000</span><small>pt</small></div>
+    <div class="month-yen">¥ <span id="monthYen">2,000</span></div>
+    <div class="month-breakdown">
+      持ち点 2,000 ＋ 承認済み <span id="approvedPts">0</span> pt
+      <span style="opacity:.7">（未承認 <span id="pendingPts">0</span> pt）</span>
+    </div>
+  </div>
+
+  <!-- コード貼り付け -->
+  <div class="card">
+    <h2>📨 こどもからのコードを貼る</h2>
+    <textarea class="code-input" id="codeInput" placeholder="こどものアプリでコピーしたコードを ここに貼り付けてください
+（🌸RBCODE🌸 で始まるテキスト）"></textarea>
+    <button class="btn btn-primary" onclick="importCode()">▼ コードを取り込む ▼</button>
+  </div>
+
+  <!-- 週ごと管理 -->
+  <div class="card">
+    <h2>📅 週ごとの確認・承認</h2>
+    <div class="week-tabs" id="weekTabs"></div>
+    <div id="weekContent"></div>
+    <div class="legend">
+      <span>🌸 = こどもから提案 (タップで承認/取消)</span><br>
+      <span>承認した分だけお小遣いに反映されます</span>
+    </div>
+  </div>
+
+  <!-- 出力 -->
+  <div class="card">
+    <h2>📄 出力</h2>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="downloadWeekPDF()">この週をPDF</button>
+      <button class="btn btn-secondary" onclick="downloadMonthPDF()">月まとめてPDF</button>
+    </div>
+    <div class="btn-row" style="margin-top:6px">
+      <button class="btn btn-ghost" onclick="exportData()">データ書き出し（バックアップ）</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('importFile').click()">データ読み込み</button>
+      <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+    </div>
+  </div>
+
+  <div class="footer-deco">🌸 ・ 🌸 ・ 🌸</div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ========== 設定（子供アプリと同じ） ==========
+const TASKS = [
+  {id:'sleep',  emoji:'💤', label:'自室で寝る',         pts:10},
+  {id:'dish',   emoji:'🫧', label:'お皿を洗う',         pts:50},
+  {id:'wash',   emoji:'✨', label:'洗面所をキレイに',   pts:50},
+  {id:'bento',  emoji:'🍱', label:'弁当箱と水筒を出す', pts:25},
+  {id:'clothes',emoji:'👕', label:'洗濯物を片付ける',   pts:50},
+];
+const BASE_POINTS = 2000;
+const STORAGE_KEY = 'okozukai_oya_v1';
+const DAYS = ['日','月','火','水','木','金','土'];
+
+// ========== 期間計算 ==========
+function getCurrentPeriod(date = new Date()){
+  const d = new Date(date);
+  let year = d.getFullYear();
+  let month = d.getMonth();
+  if(d.getDate() >= 26){
+    month += 1;
+    if(month > 11){month = 0; year += 1;}
+  }
+  const endDate = new Date(year, month, 25);
+  const startDate = new Date(year, month - 1, 26);
+  return {year, month: month+1, startDate, endDate};
+}
+function getWeeks(period){
+  const weeks = [];
+  let cur = new Date(period.startDate);
+  let weekStart = new Date(cur);
+  let weekDays = [];
+  while(cur <= period.endDate){
+    weekDays.push(new Date(cur));
+    if(cur.getDay() === 0 || cur.getTime() === period.endDate.getTime()){
+      weeks.push({start:new Date(weekStart), end:new Date(cur), days:weekDays});
+      cur.setDate(cur.getDate()+1);
+      weekStart = new Date(cur);
+      weekDays = [];
+      continue;
+    }
+    cur.setDate(cur.getDate()+1);
+  }
+  if(weekDays.length>0){
+    weeks.push({start:weekStart, end:weekDays[weekDays.length-1], days:weekDays});
+  }
+  return weeks;
+}
+function dateKey(d){
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function fmt(d){return (d.getMonth()+1)+'/'+d.getDate()+'('+DAYS[d.getDay()]+')';}
+
+// ========== 状態 ==========
+// state構造: 
+// {
+//   proposals: { "YYYY-MM-DD": {sleep:true,...} }  // 子供から届いた提案
+//   approved:  { "YYYY-MM-DD": {sleep:true,...} }  // 親が承認したもの
+// }
+let state = loadState();
+const period = getCurrentPeriod();
+const weeks = getWeeks(period);
+let activeWeekIdx = getActiveWeekIdx();
+
+function getActiveWeekIdx(){
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  for(let i=0;i<weeks.length;i++){
+    if(today >= weeks[i].start && today <= weeks[i].end) return i;
+  }
+  return 0;
+}
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){}
+  return {proposals:{}, approved:{}};
+}
+function saveState(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
+}
+
+function getProposal(d, taskId){
+  const k = dateKey(d);
+  return !!(state.proposals[k] && state.proposals[k][taskId]);
+}
+function getApproved(d, taskId){
+  const k = dateKey(d);
+  return !!(state.approved[k] && state.approved[k][taskId]);
+}
+function toggleApproved(d, taskId){
+  const k = dateKey(d);
+  if(!state.approved[k]) state.approved[k] = {};
+  state.approved[k][taskId] = !state.approved[k][taskId];
+  if(!state.approved[k][taskId]) delete state.approved[k][taskId];
+  saveState();
+}
+
+// ========== 計算 ==========
+function calcWeekApproved(week){
+  let total = 0;
+  for(const d of week.days){
+    for(const t of TASKS){
+      if(getApproved(d, t.id)) total += t.pts;
+    }
+  }
+  return total;
+}
+function calcWeekProposed(week){
+  let total = 0;
+  for(const d of week.days){
+    for(const t of TASKS){
+      if(getProposal(d, t.id) && !getApproved(d, t.id)) total += t.pts;
+    }
+  }
+  return total;
+}
+function calcMonthApproved(){
+  return weeks.reduce((s,w)=>s+calcWeekApproved(w), 0);
+}
+function calcMonthProposed(){
+  return weeks.reduce((s,w)=>s+calcWeekProposed(w), 0);
+}
+
+// ========== コード取り込み ==========
+function importCode(){
+  const input = document.getElementById('codeInput').value.trim();
+  if(!input){ showToast('コードを貼り付けてください','error'); return; }
+  
+  // ヘッダ除去
+  let raw = input.replace(/🌸RBCODE🌸/g,'').trim();
+  // 改行・空白除去
+  raw = raw.replace(/\s+/g,'');
+  
+  let data;
+  try{
+    const json = decodeURIComponent(escape(atob(raw)));
+    data = JSON.parse(json);
+  }catch(e){
+    showToast('コードが正しくないみたいです','error'); return;
+  }
+  
+  if(!data || !data.c || typeof data.c !== 'object'){
+    showToast('コードの中身が読めませんでした','error'); return;
+  }
+  
+  // 期間チェック（参考表示用）
+  let count = 0;
+  for(const dateK in data.c){
+    if(!Array.isArray(data.c[dateK])) continue;
+    if(!state.proposals[dateK]) state.proposals[dateK] = {};
+    // 既存の提案は一旦この日付ぶんクリアして上書き（最新優先）
+    state.proposals[dateK] = {};
+    for(const tid of data.c[dateK]){
+      if(TASKS.find(t=>t.id===tid)){
+        state.proposals[dateK][tid] = true;
+        count++;
+      }
+    }
+    if(Object.keys(state.proposals[dateK]).length===0){
+      delete state.proposals[dateK];
+    }
+  }
+  
+  saveState();
+  
+  // 取り込んだ週にジャンプ
+  if(data.s){
+    const parts = data.s.split('-').map(Number);
+    const startDate = new Date(parts[0], parts[1]-1, parts[2]);
+    for(let i=0;i<weeks.length;i++){
+      if(startDate >= weeks[i].start && startDate <= weeks[i].end){
+        activeWeekIdx = i; break;
+      }
+    }
+  }
+  
+  document.getElementById('codeInput').value = '';
+  render();
+  showToast(`✨ ${count}件 取り込みました（第${data.w||activeWeekIdx+1}週）`,'ok');
+}
+
+// ========== 描画 ==========
+function renderPeriod(){
+  document.getElementById('periodValue').textContent = 
+    `${period.startDate.getFullYear()}年 ${period.startDate.getMonth()+1}/${period.startDate.getDate()} 〜 ${period.endDate.getMonth()+1}/${period.endDate.getDate()}`;
+}
+
+function renderTotal(){
+  const approved = calcMonthApproved();
+  const pending = calcMonthProposed();
+  const total = BASE_POINTS + approved;
+  document.getElementById('monthPts').textContent = total.toLocaleString();
+  document.getElementById('monthYen').textContent = total.toLocaleString();
+  document.getElementById('approvedPts').textContent = approved.toLocaleString();
+  document.getElementById('pendingPts').textContent = pending.toLocaleString();
+}
+
+function hasWeekData(week){
+  for(const d of week.days){
+    const k = dateKey(d);
+    if(state.proposals[k] && Object.keys(state.proposals[k]).length>0) return true;
+    if(state.approved[k] && Object.keys(state.approved[k]).length>0) return true;
+  }
+  return false;
+}
+
+function renderWeekTabs(){
+  const tabs = document.getElementById('weekTabs');
+  tabs.innerHTML = '';
+  weeks.forEach((w,i)=>{
+    const btn = document.createElement('button');
+    const cls = ['week-tab'];
+    if(i===activeWeekIdx) cls.push('active');
+    if(hasWeekData(w)) cls.push('has-data');
+    btn.className = cls.join(' ');
+    const wPts = calcWeekApproved(w);
+    btn.innerHTML = `<span class="num">第${i+1}週</span>${fmt(w.start)}〜${fmt(w.end)}<span class="pts">${wPts}pt</span>`;
+    btn.onclick = ()=>{activeWeekIdx=i; render();};
+    tabs.appendChild(btn);
+  });
+}
+
+function renderWeekContent(){
+  const wrap = document.getElementById('weekContent');
+  const week = weeks[activeWeekIdx];
+  const hasData = hasWeekData(week);
+  
+  let html = `<table class="week-table">
+    <thead><tr>
+      <th>日付</th>
+      ${TASKS.map(t=>`<th title="${t.label}"><span style="font-size:20px">${t.emoji}</span><span class="pts-label">${t.pts}pt</span></th>`).join('')}
+      <th class="total-col">合計</th>
+    </tr></thead><tbody>`;
+  
+  week.days.forEach(d=>{
+    const k = dateKey(d);
+    let dayPts = 0;
+    let cells = '';
+    TASKS.forEach(t=>{
+      const proposed = getProposal(d, t.id);
+      const approved = getApproved(d, t.id);
+      if(approved) dayPts += t.pts;
+      let cls = 'check';
+      if(proposed) cls += ' proposed';
+      if(approved) cls += ' on';
+      cells += `<td><button class="${cls}" data-date="${k}" data-task="${t.id}" title="${t.label} +${t.pts}pt">✓</button></td>`;
+    });
+    html += `<tr>
+      <td>${d.getMonth()+1}/${d.getDate()} ${DAYS[d.getDay()]}</td>
+      ${cells}
+      <td class="total-col">${dayPts}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  
+  if(!hasData){
+    html += `<div class="empty-hint">まだコードが取り込まれていません。<br>こどもの「コードを送る」を取り込むと表示されます。</div>`;
+  }
+  
+  const wkApproved = calcWeekApproved(week);
+  const wkProposed = calcWeekProposed(week);
+  html += `<div class="week-foot">
+    <div>
+      <div class="label">この週の承認済み</div>
+      <span class="val">${wkApproved}</span> pt
+      <span class="yen">( ¥${wkApproved.toLocaleString()} )</span>
+    </div>
+    ${wkProposed>0 ? `<div style="text-align:right">
+      <div class="label">未承認の提案</div>
+      <span style="color:var(--gold);font-weight:600">+${wkProposed}</span> pt
+    </div>` : ''}
+  </div>`;
+  
+  if(wkProposed>0){
+    html += `<div class="btn-row">
+      <button class="btn btn-secondary" onclick="approveAll()">この週ぜんぶ承認</button>
+      <button class="btn btn-ghost" onclick="rejectAll()">提案だけクリア</button>
+    </div>`;
+  }
+  
+  wrap.innerHTML = html;
+  
+  // チェックボックスイベント
+  wrap.querySelectorAll('.check').forEach(btn=>{
+    btn.onclick = ()=>{
+      const dk = btn.dataset.date;
+      const tid = btn.dataset.task;
+      const parts = dk.split('-').map(Number);
+      const d = new Date(parts[0], parts[1]-1, parts[2]);
+      toggleApproved(d, tid);
+      render();
+    };
+  });
+}
+
+function approveAll(){
+  const week = weeks[activeWeekIdx];
+  for(const d of week.days){
+    const k = dateKey(d);
+    if(state.proposals[k]){
+      if(!state.approved[k]) state.approved[k] = {};
+      for(const tid in state.proposals[k]){
+        if(state.proposals[k][tid]) state.approved[k][tid] = true;
+      }
+    }
+  }
+  saveState();
+  render();
+  showToast('✨ ぜんぶ承認しました','ok');
+}
+
+function rejectAll(){
+  if(!confirm('この週の未承認の提案をクリアしますか？\n（既に承認した分はそのまま残ります）')) return;
+  const week = weeks[activeWeekIdx];
+  for(const d of week.days){
+    const k = dateKey(d);
+    if(state.proposals[k]){
+      // 承認されていない項目だけクリア
+      const apv = state.approved[k] || {};
+      const newProp = {};
+      for(const tid in state.proposals[k]){
+        if(apv[tid]) newProp[tid] = state.proposals[k][tid];
+      }
+      if(Object.keys(newProp).length>0) state.proposals[k] = newProp;
+      else delete state.proposals[k];
+    }
+  }
+  saveState();
+  render();
+}
+
+function render(){
+  renderPeriod();
+  renderTotal();
+  renderWeekTabs();
+  renderWeekContent();
+}
+
+// ========== PDF ==========
+function pdfHeader(doc, title, subtitle){
+  doc.setFillColor(255, 155, 179);
+  doc.rect(0, 0, 210, 25, 'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(15);
+  doc.text(title, 105, 13, {align:'center'});
+  doc.setFontSize(9);
+  doc.text(subtitle, 105, 20, {align:'center'});
+  doc.setTextColor(61,42,53);
+}
+
+function drawWeekTable(doc, week, startY){
+  let y = startY;
+  doc.setFontSize(10);
+  doc.setFont(undefined,'bold');
+  doc.text(`Week ${weeks.indexOf(week)+1}: ${dateKey(week.start)} - ${dateKey(week.end)}`, 14, y);
+  y+=7;
+  
+  doc.setFontSize(8);
+  const headers = ['Date','Day','sleep','dish','wash','bento','clothes','Total'];
+  const colX = [14, 38, 56, 80, 104, 128, 152, 178];
+  const ptsRow = ['','', '10', '50', '50', '25', '50', ''];
+  
+  doc.setFillColor(255,214,224);
+  doc.rect(12, y-4, 186, 7, 'F');
+  headers.forEach((h,i)=>doc.text(h, colX[i], y));
+  y+=4;
+  doc.setFontSize(7);
+  doc.setTextColor(140,90,110);
+  ptsRow.forEach((h,i)=>{ if(h) doc.text('('+h+'pt)', colX[i], y); });
+  y+=5;
+  doc.setTextColor(61,42,53);
+  doc.setFontSize(8);
+  doc.setFont(undefined,'normal');
+  
+  let weekTotal = 0;
+  week.days.forEach((d,idx)=>{
+    if(idx%2===0){doc.setFillColor(255,248,250); doc.rect(12, y-4, 186, 6, 'F');}
+    const k = dateKey(d);
+    const ap = state.approved[k] || {};
+    let dayTotal = 0;
+    doc.text(`${d.getMonth()+1}/${d.getDate()}`, colX[0], y);
+    doc.text(DAYS[d.getDay()], colX[1], y);
+    TASKS.forEach((t,i)=>{
+      const v = ap[t.id]?'O':'-';
+      doc.text(v, colX[2+i]+6, y);
+      if(ap[t.id]) dayTotal += t.pts;
+    });
+    doc.text(String(dayTotal), colX[7]+2, y);
+    weekTotal += dayTotal;
+    y+=6;
+  });
+  
+  y+=2;
+  doc.setFillColor(216,83,122);
+  doc.rect(12, y-5, 186, 9, 'F');
+  doc.setTextColor(255,255,255);
+  doc.setFont(undefined,'bold');
+  doc.setFontSize(10);
+  doc.text(`Week Total :  ${weekTotal} pt   ( ¥${weekTotal.toLocaleString()} )`, 105, y, {align:'center'});
+  doc.setTextColor(61,42,53);
+  doc.setFont(undefined,'normal');
+  y+=10;
+  
+  return {y, weekTotal};
+}
+
+function downloadWeekPDF(){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const week = weeks[activeWeekIdx];
+  pdfHeader(doc, '* Okozukai Calculator * Oya', 
+    `Week ${activeWeekIdx+1} of ${period.year}/${String(period.month).padStart(2,'0')} period`);
+  
+  let y = 38;
+  doc.setFontSize(10);
+  doc.text(`Period: ${dateKey(period.startDate)} - ${dateKey(period.endDate)}`, 14, y); y+=8;
+  
+  const { weekTotal } = drawWeekTable(doc, week, y);
+  
+  // 月集計
+  const monthApproved = calcMonthApproved();
+  const monthTotal = BASE_POINTS + monthApproved;
+  doc.setFontSize(10);
+  doc.text(`Month so far: Base 2000 + Approved ${monthApproved} = ${monthTotal} pt  ( ¥${monthTotal.toLocaleString()} )`, 105, 250, {align:'center'});
+  
+  doc.setFontSize(8);
+  doc.setTextColor(150,150,150);
+  doc.text(`Generated: ${new Date().toLocaleString('ja-JP')}`, 105, 285, {align:'center'});
+  
+  doc.save(`okozukai_oya_${period.year}-${String(period.month).padStart(2,'0')}_w${activeWeekIdx+1}.pdf`);
+  showToast('📄 週PDFを保存しました','ok');
+}
+
+function downloadMonthPDF(){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  pdfHeader(doc, '* Okozukai Calculator * Oya  - Monthly -', 
+    `${period.year}/${String(period.month).padStart(2,'0')} Period`);
+  
+  let y = 38;
+  doc.setFontSize(10);
+  doc.text(`Period: ${dateKey(period.startDate)} - ${dateKey(period.endDate)}`, 14, y); y+=8;
+  
+  const totals = [];
+  for(let i=0;i<weeks.length;i++){
+    if(y > 230){ doc.addPage(); y = 20; }
+    const r = drawWeekTable(doc, weeks[i], y);
+    y = r.y + 4;
+    totals.push(r.weekTotal);
+  }
+  
+  // 月合計
+  if(y > 240){ doc.addPage(); y = 20; }
+  const monthApproved = totals.reduce((s,v)=>s+v,0);
+  const monthTotal = BASE_POINTS + monthApproved;
+  
+  doc.setFillColor(58, 77, 107);
+  doc.rect(12, y, 186, 24, 'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(11);
+  doc.setFont(undefined,'bold');
+  doc.text('--- MONTHLY TOTAL ---', 105, y+8, {align:'center'});
+  doc.setFontSize(14);
+  doc.text(`Base 2000 + Earned ${monthApproved} = ${monthTotal} pt`, 105, y+15, {align:'center'});
+  doc.setFontSize(13);
+  doc.text(`Payout :  ¥ ${monthTotal.toLocaleString()}`, 105, y+22, {align:'center'});
+  
+  doc.setTextColor(150,150,150);
+  doc.setFontSize(8);
+  doc.setFont(undefined,'normal');
+  doc.text(`Generated: ${new Date().toLocaleString('ja-JP')}`, 105, 285, {align:'center'});
+  
+  doc.save(`okozukai_oya_${period.year}-${String(period.month).padStart(2,'0')}_month.pdf`);
+  showToast('📄 月PDFを保存しました','ok');
+}
+
+// ========== バックアップ ==========
+function exportData(){
+  const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `okozukai_oya_backup_${dateKey(new Date())}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('💾 データを書き出しました','ok');
+}
+function importData(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev=>{
+    try{
+      const d = JSON.parse(ev.target.result);
+      if(d && (d.proposals || d.approved)){
+        if(!confirm('現在のデータに上書きしますか？')) return;
+        state = {proposals:d.proposals||{}, approved:d.approved||{}};
+        saveState(); render();
+        showToast('💾 読み込みました','ok');
+      }
+    }catch(err){ showToast('ファイルが読めませんでした','error'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+function showToast(msg, type){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type?' '+type:'');
+  setTimeout(()=>t.className='toast', 2600);
+}
+
+// ========== 起動 ==========
+render();
+</script>
+</body>
+</html>
